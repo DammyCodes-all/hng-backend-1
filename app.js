@@ -99,6 +99,133 @@ app.get("/strings/:value", async (req, res) => {
   }
 });
 
+app.get("/strings", (req, res) => {
+  const {
+    is_palindrome,
+    min_length,
+    max_length,
+    word_count,
+    contains_character,
+  } = req.query;
+
+  const palindromeFilter =
+    is_palindrome === undefined
+      ? undefined
+      : is_palindrome === "true"
+      ? true
+      : is_palindrome === "false"
+      ? false
+      : null;
+
+  if (palindromeFilter === null) {
+    return res
+      .status(400)
+      .json({ error: "is_palindrome must be true or false" });
+  }
+
+  const minLengthFilter =
+    min_length !== undefined ? Number(min_length) : undefined;
+  if (minLengthFilter !== undefined && Number.isNaN(minLengthFilter)) {
+    return res.status(400).json({ error: "min_length must be a number" });
+  }
+
+  const maxLengthFilter =
+    max_length !== undefined ? Number(max_length) : undefined;
+  if (maxLengthFilter !== undefined && Number.isNaN(maxLengthFilter)) {
+    return res.status(400).json({ error: "max_length must be a number" });
+  }
+
+  const wordCountFilter =
+    word_count !== undefined ? Number(word_count) : undefined;
+  if (wordCountFilter !== undefined && Number.isNaN(wordCountFilter)) {
+    return res.status(400).json({ error: "word_count must be a number" });
+  }
+
+  const containsCharFilter =
+    contains_character !== undefined
+      ? contains_character.toLowerCase()
+      : undefined;
+  if (containsCharFilter !== undefined && containsCharFilter.length === 0) {
+    return res
+      .status(400)
+      .json({ error: "contains_character cannot be empty" });
+  }
+
+  db.all(`SELECT id, value, created_at FROM strings`, (err, rows = []) => {
+    if (err) {
+      console.error("Error fetching strings", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+
+    const filtered = rows
+      .map((row) => {
+        const trimmed = row.value.trim();
+        const wordCount = trimmed === "" ? 0 : trimmed.split(/\s+/).length;
+
+        return {
+          id: row.id,
+          value: row.value,
+          properties: {
+            length: row.value.length,
+            is_palindrome: isPalindrome(row.value),
+            unique_characters: getUniqueCharsCount(row.value),
+            word_count: wordCount,
+            sha256_hash: row.id,
+            character_frequency_map: Object.fromEntries(
+              generateCharFreqMap(row.value)
+            ),
+          },
+          created_at: row.created_at,
+        };
+      })
+      .filter((entry) => {
+        if (
+          palindromeFilter !== undefined &&
+          entry.properties.is_palindrome !== palindromeFilter
+        ) {
+          return false;
+        }
+        if (
+          minLengthFilter !== undefined &&
+          entry.properties.length < minLengthFilter
+        ) {
+          return false;
+        }
+        if (
+          maxLengthFilter !== undefined &&
+          entry.properties.length > maxLengthFilter
+        ) {
+          return false;
+        }
+        if (
+          wordCountFilter !== undefined &&
+          entry.properties.word_count !== wordCountFilter
+        ) {
+          return false;
+        }
+        if (
+          containsCharFilter !== undefined &&
+          !entry.value.toLowerCase().includes(containsCharFilter)
+        ) {
+          return false;
+        }
+        return true;
+      });
+    const responseData = {
+      data: [...filtered],
+      count: filtered.length,
+      filters_applied: {
+        is_palindrome: palindromeFilter,
+        min_length: minLengthFilter,
+        max_length: maxLengthFilter,
+        word_count: wordCountFilter,
+        contains_character: containsCharFilter,
+      },
+    };
+    return res.json(responseData);
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
