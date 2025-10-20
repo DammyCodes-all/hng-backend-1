@@ -90,7 +90,7 @@ app.get("/strings/:value", async (req, res) => {
         sha256_hash: stringObj?.id,
         character_frequency_map: Object.fromEntries(generateCharFreqMap(value)),
       },
-      created_at: stringObj?.created_at,
+      created_at: stringObj?.created_at || new Date().toISOString(),
     };
     return res.status(200).json(responseObj);
   } catch (error) {
