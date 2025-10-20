@@ -1,0 +1,21 @@
+{
+  "name": "hng-backend-1",
+  "version": "1.0.0",
+  "description": "An api  that analyzes strings and return metadata on them",
+  "keywords": [
+    "string-metadata",
+    "api"
+  ],
+  "license": "MIT",
+  "author": "Dammycodes",
+  "type": "module",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev" : "node --watch app.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "sqlite3": "^5.1.7"
+  }
+}
